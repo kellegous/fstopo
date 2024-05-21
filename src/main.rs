@@ -6,7 +6,7 @@ use rand::Rng;
 use xml_dom::level2::{convert::*, RefNode};
 use xml_dom::level2::{Document, Element};
 
-use topo::{Path, Point, Polyline, Range, Rect, Seed, Size};
+use topo::{Path, Point, Range, Rect, Seed, Size};
 
 fn get_viewbox(root: RefNode) -> Result<Rect, Box<dyn Error>> {
     let root = as_element(&root)?;
@@ -77,23 +77,13 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
         count += 1;
         let d = path.get_attribute("d").ok_or("no d")?;
         let mut path = d.parse::<Path>()?;
-        path.transform(|x, y| ((x - tx) * scale, (y - ty) * scale));
+        path.transform(|p| Point::from_xy((p.x() - tx) * scale, (p.y() - ty) * scale));
 
         ctx.new_path();
         path.draw(&ctx);
         ctx.set_source_rgb(1.0, 0.0, 0.4);
         ctx.set_line_width(2.0);
         ctx.stroke()?;
-
-        let mut poly = d.parse::<Polyline>()?;
-        if poly.len() >= 2 {
-            poly.transform(|p| Point::from_xy((p.x() - tx) * scale, (p.y() - ty) * scale));
-            ctx.new_path();
-            path.draw(&ctx);
-            ctx.set_source_rgba(1.0, 1.0, 1.0, 0.5);
-            ctx.set_line_width(3.0);
-            ctx.stroke()?;
-        }
     }
 
     println!("count = {}", count);

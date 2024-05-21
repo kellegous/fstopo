@@ -2,6 +2,8 @@ use std::{error::Error, str::FromStr};
 
 use cairo::Context;
 
+use crate::Point;
+
 pub struct Path {
     cmds: Vec<Cmd>,
 }
@@ -10,22 +12,20 @@ impl Path {
     pub fn draw(&self, ctx: &Context) {
         for cmd in self.cmds.iter() {
             match cmd {
-                Cmd::MoveTo(x, y) => ctx.move_to(*x, *y),
-                Cmd::LineTo(x, y) => ctx.line_to(*x, *y),
-                Cmd::Close => ctx.close_path(),
+                Cmd::MoveTo(p) => ctx.move_to(p.x(), p.y()),
+                Cmd::LineTo(p) => ctx.line_to(p.x(), p.y()),
             }
         }
     }
 
     pub fn transform<F>(&mut self, tx: F)
     where
-        F: Fn(f64, f64) -> (f64, f64),
+        F: Fn(&Point) -> Point,
     {
         for cmd in self.cmds.iter_mut() {
             match cmd {
-                Cmd::MoveTo(x, y) => (*x, *y) = tx(*x, *y),
-                Cmd::LineTo(x, y) => (*x, *y) = tx(*x, *y),
-                _ => {}
+                Cmd::MoveTo(p) => *p = tx(p),
+                Cmd::LineTo(p) => *p = tx(p),
             }
         }
     }
@@ -46,27 +46,21 @@ impl FromStr for Path {
         let mut cmds = Vec::new();
         let mut elems = s.split_whitespace();
         while let Some(cmd) = elems.next() {
-            match cmd {
-                "M" => {
-                    cmds.push(Cmd::MoveTo(
-                        elems.next().ok_or("no x")?.parse()?,
-                        elems.next().ok_or("no y")?.parse()?,
-                    ));
-                }
-                "L" => cmds.push(Cmd::LineTo(
-                    elems.next().ok_or("no x")?.parse()?,
-                    elems.next().ok_or("no y")?.parse()?,
-                )),
+            let pt = Point::from_xy(
+                elems.next().ok_or("no x")?.parse()?,
+                elems.next().ok_or("no y")?.parse()?,
+            );
+            cmds.push(match cmd {
+                "M" => Cmd::MoveTo(pt),
+                "L" => Cmd::LineTo(pt),
                 _ => return Err(format!("unknown command: {}", cmd).into()),
-            }
+            });
         }
         Ok(Path { cmds })
     }
 }
 
-#[derive(Debug)]
 pub enum Cmd {
-    MoveTo(f64, f64),
-    LineTo(f64, f64),
-    Close,
+    MoveTo(Point),
+    LineTo(Point),
 }
