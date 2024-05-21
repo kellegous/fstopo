@@ -37,6 +37,13 @@ impl Rect {
     pub fn height(&self) -> f64 {
         self.bottom_right.y() - self.top_left.y()
     }
+
+    pub fn intersects(&self, other: &Rect) -> bool {
+        self.top_left.x() < other.bottom_right.x()
+            && self.bottom_right.x() > other.top_left.x()
+            && self.top_left.y() < other.bottom_right.y()
+            && self.bottom_right.y() > other.top_left.y()
+    }
 }
 
 impl FromStr for Rect {

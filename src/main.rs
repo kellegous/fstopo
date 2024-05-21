@@ -3,10 +3,9 @@ use std::{error::Error, fs, io::BufReader};
 use cairo::{Context, Format, ImageSurface};
 use clap::Parser;
 use rand::Rng;
-use xml_dom::level2::{convert::*, RefNode};
-use xml_dom::level2::{Document, Element};
+use xml_dom::level2::{convert::*, Document, Element, RefNode};
 
-use topo::{Path, Point, Range, Rect, Seed, Size};
+use topo::{Path, Point, Range, Rect, Seed, Size, ThemeRef};
 
 fn get_viewbox(root: RefNode) -> Result<Rect, Box<dyn Error>> {
     let root = as_element(&root)?;
@@ -34,22 +33,31 @@ struct Args {
     #[clap(long, value_parser=Range::from_arg, default_value_t=Range::from(1.0..8.0))]
     scale_range: Range,
 
+    #[clap(long, default_value_t = ThemeRef::from_path("themes.bin"), value_parser=ThemeRef::from_arg)]
+    theme: ThemeRef,
     #[clap()]
     src: String,
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    println!("{:?}", args);
     let mut rng = args.seed.rng();
-
-    let scale = rng.gen_range(args.scale_range.to_std().clone());
 
     let r = fs::File::open(args.src)?;
     let mut br = BufReader::new(r);
     let doc = xml_dom::parser::read_reader(&mut br)?;
     let root = doc.document_element().ok_or("no root element")?;
     let view_box = get_viewbox(root.clone())?;
+
+    let tx = rng.gen_range(view_box.x()..view_box.width() - args.size.width());
+    let ty = rng.gen_range(view_box.y()..view_box.height() - args.size.height());
+    let scale = rng.gen_range(args.scale_range.to_std().clone());
+    let (theme, colors) = args.theme.pick(&mut rng)?;
+
+    println!(
+        "tx = {}, ty = {}, scale = {}, theme = {}",
+        tx, ty, scale, theme
+    );
 
     let surface = ImageSurface::create(
         Format::ARgb32,
@@ -58,35 +66,28 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
     )?;
     let ctx = Context::new(&surface)?;
 
-    ctx.set_source_rgb(0.0, 0.0, 0.0);
-    ctx.rectangle(0.0, 0.0, view_box.width(), view_box.height());
+    colors[0].set(&ctx);
+    ctx.rectangle(0.0, 0.0, args.size.width(), args.size.height());
     ctx.fill()?;
 
     ctx.translate(view_box.x(), view_box.y());
-
-    let tx = rng.gen_range(view_box.x()..view_box.width() - args.size.width());
-    let ty = rng.gen_range(view_box.y()..view_box.height() - args.size.height());
-    println!("tx = {}, ty = {}, scale = {}", tx, ty, scale);
 
     let root = as_element(&root)?;
     let paths = root.get_elements_by_tag_name("path");
     let paths = paths.iter().filter(|&n| is_contour(n.clone()));
 
-    let mut count = 0;
     for path in paths {
-        count += 1;
         let d = path.get_attribute("d").ok_or("no d")?;
         let mut path = d.parse::<Path>()?;
         path.transform(|p| Point::from_xy((p.x() - tx) * scale, (p.y() - ty) * scale));
 
         ctx.new_path();
         path.draw(&ctx);
-        ctx.set_source_rgb(1.0, 0.0, 0.4);
+        colors[1].set(&ctx);
         ctx.set_line_width(2.0);
-        ctx.stroke()?;
+        ctx.stroke_preserve()?;
     }
 
-    println!("count = {}", count);
     surface.write_to_png(&mut fs::File::create(args.dest)?)?;
 
     Ok(())
