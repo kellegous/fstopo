@@ -27,8 +27,11 @@ pub struct Args {
 }
 
 pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
-    let extract::Data { size, mut paths } =
-        serde_json::from_reader(&mut fs::File::open(&args.src)?)?;
+    let extract::Data {
+        size,
+        region: _region,
+        mut paths,
+    } = serde_json::from_reader(&mut fs::File::open(&args.src)?)?;
 
     let mut rng = args.seed.rng();
 

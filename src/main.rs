@@ -26,8 +26,6 @@ impl Command {
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>> {
-    // 35.48879, -80.04998 (bl)
-    // 35.64643, -79.85005 (tr)
     let args = Args::parse();
     args.command.run()
 }

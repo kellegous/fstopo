@@ -3,16 +3,18 @@ use std::{error::Error, fs, io::BufReader};
 use serde::{Deserialize, Serialize};
 use xml_dom::level2::{convert::*, Document, Element, RefNode};
 
-use crate::{Path, Point, Rect, Size};
+use crate::{geo, Path, Point, Rect, Size};
 
 #[derive(clap::Args, Debug)]
 pub struct Args {
+    #[clap(value_parser=geo::Rect::from_arg)]
+    region: geo::Rect,
+
     #[clap()]
     src: String,
 
     #[clap()]
     dst: String,
-    // region: geo::Rect,
 }
 
 fn get_viewbox(root: RefNode) -> Result<Rect, Box<dyn Error>> {
@@ -48,6 +50,7 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
 
     let data = Data {
         size: Size::new(view_box.width(), view_box.height()),
+        region: args.region.clone(),
         paths,
     };
 
@@ -59,5 +62,6 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Data {
     pub size: Size,
+    pub region: geo::Rect,
     pub paths: Vec<Path>,
 }
