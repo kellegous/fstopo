@@ -22,6 +22,9 @@ pub struct Args {
     #[clap(long, value_parser=Range::from_arg, default_value_t=Range::from(1.0..8.0))]
     scale_range: Range,
 
+    #[clap(long, value_parser=Range::from_arg, default_value_t=Range::from(2.0..4.0))]
+    line_width_range: Range,
+
     #[clap(long, default_value_t=ThemeRef::from_path("themes.bin"), value_parser=ThemeRef::from_arg)]
     theme: ThemeRef,
 }
@@ -67,7 +70,10 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
     ctx.fill()?;
 
     ctx.save()?;
-    let lw = 2.0 * 2.0 * inv_lerp(args.scale_range.to_std(), scale);
+    let lw = lerp(
+        args.line_width_range.to_std(),
+        inv_lerp(args.scale_range.to_std(), scale),
+    );
     ctx.set_line_width(lw);
     for path in paths.iter() {
         ctx.new_path();
