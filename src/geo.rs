@@ -4,8 +4,8 @@ use serde::{de, ser, Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct LatLng {
-    lat: f64,
-    lng: f64,
+    pub lat: f64,
+    pub lng: f64,
 }
 
 impl LatLng {
@@ -138,8 +138,8 @@ fn to_dms(v: f64) -> (i32, i32, i32) {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rect {
-    nw: LatLng,
-    se: LatLng,
+    pub nw: LatLng,
+    pub se: LatLng,
 }
 
 impl Rect {
@@ -157,7 +157,7 @@ impl FromStr for Rect {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (nw, se) = s
-            .split_once("-")
+            .split_once('-')
             .ok_or(format!("invalid geo rect: {}", s))?;
 
         let nw = nw.parse::<LatLng>()?;

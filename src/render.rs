@@ -29,7 +29,7 @@ pub struct Args {
 pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
     let extract::Data {
         size,
-        region: _region,
+        region,
         mut paths,
     } = serde_json::from_reader(&mut fs::File::open(&args.src)?)?;
 
@@ -49,10 +49,10 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
         path.transform(|p| Point::from_xy((p.x() - tx) * scale, (p.y() - ty) * scale));
     });
 
-    // fix this
+    // yolo, don't care if it's a little wrong.
     let location = geo::LatLng::new(
-        lerp(&(35.64643..35.48879), tx / size.width()),
-        lerp(&(-80.04998..-79.85005), ty / size.height()),
+        lerp(&(region.se.lat..region.nw.lat), ty / size.height()),
+        lerp(&(region.nw.lng..region.se.lng), tx / size.width()),
     );
 
     let surface = ImageSurface::create(
