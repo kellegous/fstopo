@@ -67,7 +67,7 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
     ctx.fill()?;
 
     ctx.save()?;
-    let lw = 2.0 * inv_lerp(args.scale_range.to_std(), scale);
+    let lw = 2.0 * 2.0 * inv_lerp(args.scale_range.to_std(), scale);
     ctx.set_line_width(lw);
     for path in paths.iter() {
         ctx.new_path();
