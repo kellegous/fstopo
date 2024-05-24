@@ -1,8 +1,11 @@
 mod color;
+pub mod extract;
+pub mod geo;
 mod path;
 mod point;
 mod range;
 mod rect;
+pub mod render;
 mod seed;
 mod size;
 mod themes;

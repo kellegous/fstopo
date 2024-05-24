@@ -1,9 +1,11 @@
-use std::{error::Error, str::FromStr};
+use std::{error::Error, fmt, str::FromStr};
 
 use cairo::Context;
+use serde::{de, ser};
 
 use crate::{Point, Rect};
 
+#[derive(Debug)]
 pub struct Path {
     cmds: Vec<Cmd>,
 }
@@ -52,6 +54,26 @@ impl Path {
         }
         Rect::new(Point::from_xy(min_x, min_y), Point::from_xy(max_x, max_y))
     }
+
+    pub fn is_valid(s: &str) -> bool {
+        let mut elems = s.split_whitespace();
+        while let Some(cmd) = elems.next() {
+            match cmd {
+                "M" | "L" => {
+                    if !has_a::<f64>(&mut elems) || !has_a::<f64>(&mut elems) {
+                        return false;
+                    }
+                }
+
+                _ => return false,
+            }
+        }
+        true
+    }
+}
+
+fn has_a<'a, T: FromStr>(elems: &mut impl Iterator<Item = &'a str>) -> bool {
+    elems.next().and_then(|s| s.parse::<T>().ok()).is_some()
 }
 
 impl FromStr for Path {
@@ -75,6 +97,55 @@ impl FromStr for Path {
     }
 }
 
+impl fmt::Display for Path {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (i, cmd) in self.cmds.iter().enumerate() {
+            if i == 0 {
+                write!(f, "{}", cmd)?;
+            } else {
+                write!(f, " {}", cmd)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl ser::Serialize for Path {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        let s = format!("{}", self);
+        ser.serialize_str(&s)
+    }
+}
+
+impl<'d> de::Deserialize<'d> for Path {
+    fn deserialize<D>(de: D) -> Result<Path, D::Error>
+    where
+        D: de::Deserializer<'d>,
+    {
+        de.deserialize_str(PathVisitor)
+    }
+}
+
+struct PathVisitor;
+
+impl<'d> de::Visitor<'d> for PathVisitor {
+    type Value = Path;
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Path::from_str(v).map_err(|e| E::custom(e.to_string()))
+    }
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "a string")
+    }
+}
+
+#[derive(Debug)]
 pub enum Cmd {
     MoveTo(Point),
     LineTo(Point),
@@ -85,6 +156,15 @@ impl Cmd {
         match self {
             Cmd::MoveTo(p) => p,
             Cmd::LineTo(p) => p,
+        }
+    }
+}
+
+impl fmt::Display for Cmd {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Cmd::MoveTo(p) => write!(f, "M {} {}", p.x(), p.y()),
+            Cmd::LineTo(p) => write!(f, "L {} {}", p.x(), p.y()),
         }
     }
 }

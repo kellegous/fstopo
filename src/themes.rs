@@ -1,4 +1,9 @@
-use std::{error::Error, fs, io, path::Path, str::FromStr};
+use std::{
+    error::Error,
+    fmt, fs, io,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use byteorder::{BigEndian, ByteOrder};
 use lazy_static::lazy_static;
@@ -55,38 +60,39 @@ impl Themes {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct ThemeRef {
-    path: String,
-    idx: Option<usize>,
+    path: PathBuf,
+    index: Option<usize>,
 }
 
 impl ThemeRef {
-    pub fn from_path(path: &str) -> Self {
-        Self {
-            path: path.to_string(),
-            idx: None,
+    pub fn pick(&self, rng: &mut dyn RngCore) -> Result<(ThemeRef, Vec<Color>), Box<dyn Error>> {
+        match self.index {
+            Some(idx) => Ok((self.clone(), Themes::open(&self.path)?.get(idx))),
+            None => {
+                let themes = Themes::open(&self.path)?;
+                let (idx, colors) = themes.pick(rng);
+                Ok((
+                    Self {
+                        path: self.path.clone(),
+                        index: Some(idx),
+                    },
+                    colors,
+                ))
+            }
         }
     }
 
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-
-    pub fn idx(&self) -> Option<usize> {
-        self.idx
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
+        ThemeRef {
+            path: PathBuf::from(path.as_ref()),
+            index: None,
+        }
     }
 
     pub fn from_arg(s: &str) -> Result<Self, String> {
-        Self::from_str(s).map_err(|_| format!("invalid theme: {}", s))
-    }
-
-    pub fn pick(&self, rng: &mut dyn RngCore) -> Result<(usize, Vec<Color>), Box<dyn Error>> {
-        let themes = Themes::open(self.path())?;
-        Ok(match self.idx {
-            Some(idx) => (idx, themes.get(idx)),
-            None => themes.pick(rng),
-        })
+        s.parse().map_err(|_| format!("invalid theme: {}", s))
     }
 }
 
@@ -98,25 +104,24 @@ impl FromStr for ThemeRef {
             Some(caps) => {
                 let path = caps.get(1).unwrap().as_str();
                 let idx = caps.get(2).unwrap().as_str().parse::<usize>()?;
-
-                Ok(ThemeRef {
-                    path: path.to_string(),
-                    idx: Some(idx),
+                Ok(Self {
+                    path: PathBuf::from(path),
+                    index: Some(idx),
                 })
             }
-            None => Ok(ThemeRef {
-                path: s.to_string(),
-                idx: None,
+            None => Ok(Self {
+                path: PathBuf::from(s),
+                index: None,
             }),
         }
     }
 }
 
-impl std::fmt::Display for ThemeRef {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self.idx {
-            Some(idx) => write!(f, "{}[{}]", self.path, idx),
-            None => write!(f, "{}", self.path),
+impl fmt::Display for ThemeRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.index {
+            Some(idx) => write!(f, "{}:{}", self.path.display(), idx),
+            None => write!(f, "{}", self.path.display()),
         }
     }
 }

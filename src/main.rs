@@ -1,94 +1,33 @@
-use std::{error::Error, fs, io::BufReader};
+use std::error::Error;
 
-use cairo::{Context, Format, ImageSurface};
-use clap::Parser;
-use rand::Rng;
-use xml_dom::level2::{convert::*, Document, Element, RefNode};
+use clap::{Parser, Subcommand};
 
-use topo::{Path, Point, Range, Rect, Seed, Size, ThemeRef};
-
-fn get_viewbox(root: RefNode) -> Result<Rect, Box<dyn Error>> {
-    let root = as_element(&root)?;
-    let viewbox = root.get_attribute("viewBox").ok_or("no viewbox")?;
-    viewbox.parse()
-}
-
-fn is_contour(path: RefNode) -> bool {
-    path.get_attribute("stroke") == Some(String::from("rgb(69.802856%, 69.802856%, 69.802856%)"))
-        && path.get_attribute("fill") == Some(String::from("none"))
-        && path.get_attribute("stroke-width") == Some(String::from("0.99001"))
-}
+use topo::{extract, render};
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[clap(long, default_value_t = Default::default(), value_parser = Seed::from_arg)]
-    seed: Seed,
+    #[clap(subcommand)]
+    command: Command,
+}
 
-    #[clap(long, default_value_t = Size::new(1600.0,600.0), value_parser = Size::from_arg)]
-    size: Size,
+#[derive(Subcommand, Debug)]
+enum Command {
+    Render(render::Args),
+    Extract(extract::Args),
+}
 
-    #[clap(long, default_value_t=String::from("topo.png"))]
-    dest: String,
-
-    #[clap(long, value_parser=Range::from_arg, default_value_t=Range::from(1.0..8.0))]
-    scale_range: Range,
-
-    #[clap(long, default_value_t = ThemeRef::from_path("themes.bin"), value_parser=ThemeRef::from_arg)]
-    theme: ThemeRef,
-    #[clap()]
-    src: String,
+impl Command {
+    fn run(&self) -> Result<(), Box<dyn Error>> {
+        match self {
+            Self::Render(args) => render::run(args),
+            Self::Extract(args) => extract::run(args),
+        }
+    }
 }
 
 fn main() -> std::result::Result<(), Box<dyn Error>> {
+    // 35.48879, -80.04998 (bl)
+    // 35.64643, -79.85005 (tr)
     let args = Args::parse();
-    let mut rng = args.seed.rng();
-
-    let r = fs::File::open(args.src)?;
-    let mut br = BufReader::new(r);
-    let doc = xml_dom::parser::read_reader(&mut br)?;
-    let root = doc.document_element().ok_or("no root element")?;
-    let view_box = get_viewbox(root.clone())?;
-
-    let tx = rng.gen_range(view_box.x()..view_box.width() - args.size.width());
-    let ty = rng.gen_range(view_box.y()..view_box.height() - args.size.height());
-    let scale = rng.gen_range(args.scale_range.to_std().clone());
-    let (theme, colors) = args.theme.pick(&mut rng)?;
-
-    println!(
-        "tx = {}, ty = {}, scale = {}, theme = {}",
-        tx, ty, scale, theme
-    );
-
-    let surface = ImageSurface::create(
-        Format::ARgb32,
-        args.size.width() as i32,
-        args.size.height() as i32,
-    )?;
-    let ctx = Context::new(&surface)?;
-
-    colors[0].set(&ctx);
-    ctx.rectangle(0.0, 0.0, args.size.width(), args.size.height());
-    ctx.fill()?;
-
-    ctx.translate(view_box.x(), view_box.y());
-
-    let root = as_element(&root)?;
-    let paths = root.get_elements_by_tag_name("path");
-    let paths = paths.iter().filter(|&n| is_contour(n.clone()));
-
-    for path in paths {
-        let d = path.get_attribute("d").ok_or("no d")?;
-        let mut path = d.parse::<Path>()?;
-        path.transform(|p| Point::from_xy((p.x() - tx) * scale, (p.y() - ty) * scale));
-
-        ctx.new_path();
-        path.draw(&ctx);
-        colors[1].set(&ctx);
-        ctx.set_line_width(2.0);
-        ctx.stroke_preserve()?;
-    }
-
-    surface.write_to_png(&mut fs::File::create(args.dest)?)?;
-
-    Ok(())
+    args.command.run()
 }

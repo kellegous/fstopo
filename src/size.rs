@@ -1,6 +1,8 @@
 use std::{error::Error, fmt, str::FromStr};
 
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Size {
     w: f64,
     h: f64,
