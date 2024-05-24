@@ -41,8 +41,8 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
     let (theme, colors) = args.theme.pick(&mut rng)?;
 
     println!(
-        "tx = {}, ty = {}, scale = {}, theme = {}",
-        tx, ty, scale, theme
+        "seed = {}, tx = {}, ty = {}, scale = {}, theme = {}",
+        args.seed, tx, ty, scale, theme
     );
 
     paths.iter_mut().for_each(|path| {
