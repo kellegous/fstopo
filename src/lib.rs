@@ -6,9 +6,11 @@ mod point;
 mod range;
 mod rect;
 pub mod render;
+pub mod render_many;
 mod seed;
 mod size;
 mod themes;
+pub mod topo;
 
 pub use color::Color;
 pub use path::Path;

@@ -10,8 +10,8 @@ impl Range {
         s.parse().map_err(|_| format!("invnalid range: {}", s))
     }
 
-    pub fn to_std(&self) -> &std::ops::Range<f64> {
-        &self.r
+    pub fn to_std(&self) -> std::ops::Range<f64> {
+        self.r.clone()
     }
 }
 

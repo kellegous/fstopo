@@ -20,7 +20,7 @@ impl Path {
         }
     }
 
-    pub fn transform<F>(&mut self, tx: F)
+    pub fn transform_into<F>(&mut self, tx: F)
     where
         F: Fn(&Point) -> Point,
     {
@@ -29,6 +29,22 @@ impl Path {
                 Cmd::MoveTo(p) => *p = tx(p),
                 Cmd::LineTo(p) => *p = tx(p),
             }
+        }
+    }
+
+    pub fn transform<F>(&self, tx: F) -> Path
+    where
+        F: Fn(&Point) -> Point,
+    {
+        Path {
+            cmds: self
+                .cmds
+                .iter()
+                .map(|cmd| match cmd {
+                    Cmd::MoveTo(p) => Cmd::MoveTo(tx(p)),
+                    Cmd::LineTo(p) => Cmd::LineTo(tx(p)),
+                })
+                .collect(),
         }
     }
 
