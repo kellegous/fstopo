@@ -1,17 +1,14 @@
-use std::{
-    error::Error,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{error::Error, fs, path::PathBuf};
 
 use cairo::{Context, FontSlant, FontWeight, Format, ImageSurface};
 use rand::{Rng, RngCore};
 
 use crate::{extract, geo, Color, Point, Seed, Size, ThemeRef};
 
-pub fn render<O>(data: &extract::Data, opts: &O) -> Result<(), Box<dyn Error>>
+pub fn render<O, F>(data: &extract::Data, opts: &O, f: F) -> Result<(), Box<dyn Error>>
 where
     O: Options,
+    F: Fn(&ThemeRef, &Point, f64, &Seed) -> Result<(), Box<dyn Error>>,
 {
     let extract::Data {
         size,
@@ -25,6 +22,8 @@ where
     let ty = rng.gen_range(0.0..size.height() - opts.size().height());
     let scale = rng.gen_range(opts.scale_range());
     let (theme, colors) = opts.theme().pick(&mut rng)?;
+
+    f(&theme, &Point::from_xy(tx, ty), scale, opts.seed())?;
 
     let (bg, fg) = select_color_pair(&mut rng, &colors);
 

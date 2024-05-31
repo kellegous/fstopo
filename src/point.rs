@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Point {
     x: f64,
@@ -21,5 +23,11 @@ impl Point {
         let dx = self.x - o.x;
         let dy = self.y - o.y;
         (dx * dx + dy * dy).sqrt()
+    }
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
     }
 }

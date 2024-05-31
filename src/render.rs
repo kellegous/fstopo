@@ -1,6 +1,6 @@
 use std::{error::Error, fs, path::PathBuf};
 
-use crate::{extract, topo, Path, Range, Seed, Size, ThemeRef};
+use crate::{extract, topo, Range, Seed, Size, ThemeRef};
 
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -61,5 +61,15 @@ impl topo::Options for Args {
 
 pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
     let data: extract::Data = serde_json::from_reader(&mut fs::File::open(&args.src)?)?;
-    topo::render(&data, args)
+    topo::render(&data, args, |theme, origin, scale, seed| {
+        println!(
+            "theme = {}, origin = ({:0.2}, {:0.2}), scale = {:0.2}, seed = {}",
+            theme,
+            origin.x(),
+            origin.y(),
+            scale,
+            seed
+        );
+        Ok(())
+    })
 }

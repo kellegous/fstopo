@@ -83,7 +83,7 @@ pub fn run(args: &Args) -> Result<(), Box<dyn Error>> {
             seed,
             dest: dst.join(format!("{}.png", seed)),
         };
-        topo::render(&data, &options)?;
+        topo::render(&data, &options, |_, _, _, _| Ok(()))?;
     }
 
     Ok(())
