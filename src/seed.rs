@@ -1,6 +1,4 @@
-use chrono::Utc;
-use rand::SeedableRng;
-use rand_pcg::Pcg64;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{num::ParseIntError, str::FromStr};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -10,9 +8,8 @@ pub struct Seed {
 
 impl Default for Seed {
     fn default() -> Self {
-        Self {
-            v: Utc::now().timestamp() as u64,
-        }
+        let mut rng = SmallRng::from_entropy();
+        Self { v: rng.gen() }
     }
 }
 
@@ -26,7 +23,7 @@ impl FromStr for Seed {
 
 impl std::fmt::Display for Seed {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:08x}", self.v)
+        write!(f, "{:016x}", self.v)
     }
 }
 
@@ -43,7 +40,7 @@ impl Seed {
         self.v
     }
 
-    pub fn rng(&self) -> Pcg64 {
-        Pcg64::seed_from_u64(self.v)
+    pub fn rng(&self) -> SmallRng {
+        SmallRng::seed_from_u64(self.v)
     }
 }
